@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}{{ location }} Overview{% endblock %}
+
+{% block content %}
+<header><div class="text-center">{{ location }}</div></header>
+<main>
+	<div class="container">
+		{% for track, day_times in records|dictsort %}
+		<div class="row">
+			<div class="col col-md-10 offset-md-1 col-lg-6 offset-lg-3">
+				<p>Fastest karts per day for track {{ track }}:</p>
+				<table class="table table-sm table-borderless table-striped">
+					<thead>
+						<tr>
+							<th scope="col">Date</th>
+							<th scope="col">First</th>
+							<th scope="col">Second</th>
+							<th scope="col">Third</th>
+							<th scope="col">Fourth</th>
+							<th scope="col">Fifth</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for date, kart_times in day_times|dictsort(reverse=True) %}
+						<tr>
+							<th scope="row">{{ date.isoformat() }}</th>
+							{% for kart, time in kart_times|dictsort(by="value") %}
+							{% if loop.index0 < 5 %}
+							<td>{{ kart }} - {{ "%0.3f"|format(time) }}</td>
+							{% if loop.last %}
+							{% for _ in range(5 - loop.length) %}
+							<td></td>
+							{% endfor %}
+							{% endif %}
+							{% endif %}
+							{% endfor %}
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+		{% endfor %}
+
+		<div class="row">
+			<div class="col">
+				<p>Detailed info on specific karts:</p>
+				{% for kart in all_karts|sort %}
+				<a href="/locations/{{ url_loc }}/karts/{{ kart }}" class="btn btn-primary btn-lg">Kart {{ kart }}</a>
+				{% endfor %}
+			</div>
+		</div>
+	</div>
+</main>
+{% endblock %}

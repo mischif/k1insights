@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{{ location }} Kart {{ kart }} History{% endblock %}
+
+{% block content %}
+<header><div class="text-center">{{ location }}</div></header>
+<main>
+	<div class="container">
+		{% for track, day_times in records|dictsort %}
+		<div class="row">
+			<div class="col col-md-10 offset-md-1 col-lg-6 offset-lg-3">
+				<p>Fastest times of the day for track {{ track }}:</p>
+				<table class="table table-sm table-borderless table-striped">
+					<thead>
+						<tr>
+							<th scope="col">Date</th>
+							<th scope="col">Time</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% for date, time in day_times|dictsort(reverse=True) %}
+						<tr>
+							<th scope="row">{{ date.isoformat() }}</th>
+							<td>{{ "%0.3f"|format(time) }}</td>
+						</tr>
+						{% endfor %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+		{% endfor %}
+	</div>
+</main>
+{% endblock %}

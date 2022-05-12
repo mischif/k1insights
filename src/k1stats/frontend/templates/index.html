@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<header><div class="text-center">K1 Stats</div></header>
+<main>
+	<div class="container">
+		<div class="col">
+			<p>Select a location below to get details on that location's karts:</p>
+			{% for loc in locations %}
+			<a href="/locations/{{ loc[1] }}" class="btn btn-primary btn-lg" >{{ loc[0] }}</a>
+			{% endfor %}
+		</div>
+	</div>
+</main>
+{% endblock %}

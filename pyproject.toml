@@ -1,0 +1,99 @@
+[project]
+name = "k1stats"
+#description = ""
+#readme = "README.md"
+requires-python = "~=3.8"
+license = {file = "LICENSE.txt"}
+
+authors = [{name = "Jeremy Brown", email = "mischif@users.noreply.github.com"}]
+
+dependencies = [
+"aiohttp>=3.8.0",
+"flask>=2.1.0",
+"anyio>=3.5.0",
+"aioitertools>=0.10.0",
+]
+
+dynamic = ["version"]
+
+[project.optional-dependencies]
+test = [
+"coverage[toml]",
+"hypothesis",
+"hypothesis-pytest",
+"mypy; python_implementation != 'PyPy'",
+"pytest >= 6.0",
+"pytest-cov",
+"pytest-asyncio",
+]
+
+[project.urls]
+repository = "https://github.com/mischif/k1stats"
+
+[project.entry-points."console_scripts"]
+k1-create-db = "k1stats.tools.create_db:main"
+k1-add-racer = "k1stats.tools.add_racer:main"
+k1-start-backend = "k1stats.backend.watchers:main"
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+	"setuptools >= 61.0.0",
+	"setuptools_scm[toml] >= 3.5.0",
+	"wheel",
+	]
+
+[tool.setuptools]
+zip-safe = true
+include-package-data = false
+package-data = {k1stats = ["py.typed"]}
+#package-dir = {"" = "src"}
+#packages = {find = {where = ["src"], namespaces = false}}
+
+[tool.setuptools_scm]
+#version_scheme = "python-simplified-semver"
+local_scheme = "no-local-version"
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+combine_star = true
+lines_after_imports = 2
+lines_between_types = 1
+py_version = 38
+
+[tool.mypy]
+pretty = true
+python_version = 3.8
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+implicit_reexport = false
+no_implicit_optional = true
+strict_optional = true
+strict_equality = true
+warn_no_return = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+allow_redefinition = false
+
+[tool.coverage.report]
+fail_under = 99
+show_missing = true
+skip_covered = true
+skip_empty = true
+
+[tool.pytest.ini_options]
+addopts = "-v --lf --cov=k1stats --cov-report term"
+asyncio_mode = "strict"
+testpaths = ["test"]
