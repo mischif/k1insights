@@ -138,14 +138,14 @@ async def test_get_heat_info(mock_fetch_and_parse, mock_gather_iter, heats, blan
     heat1_parser = Mock()
     heat1_parser.data = {
         "heat_id": 1,
-        "type": RaceTypes.STANDARD,
+        "race_type": RaceTypes.STANDARD,
         "win_cond": WinConditions.BEST_LAP,
         "time": datetime.now(),
         "track": 1,
         "sessions": [
             {
                 "name": "Racer 1",
-                "id": 1,
+                "rid": 1,
                 "pos": 1,
                 "score": 12,
                 "lap_data": [
@@ -156,7 +156,7 @@ async def test_get_heat_info(mock_fetch_and_parse, mock_gather_iter, heats, blan
             },
             {
                 "name": "Racer 2",
-                "id": 2,
+                "rid": 2,
                 "pos": 2,
                 "score": 10,
                 "lap_data": [
@@ -171,14 +171,14 @@ async def test_get_heat_info(mock_fetch_and_parse, mock_gather_iter, heats, blan
     heat2_parser = Mock()
     heat2_parser.data = {
         "heat_id": 2,
-        "type": RaceTypes.JUNIOR,
+        "race_type": RaceTypes.JUNIOR,
         "win_cond": WinConditions.BEST_LAP,
         "time": datetime.now(),
         "track": 1,
         "sessions": [
             {
                 "name": "Racer 3",
-                "id": 3,
+                "rid": 3,
                 "pos": 1,
                 "score": 12,
                 "lap_data": [
@@ -189,7 +189,7 @@ async def test_get_heat_info(mock_fetch_and_parse, mock_gather_iter, heats, blan
             },
             {
                 "name": "Racer 4",
-                "id": 4,
+                "rid": 4,
                 "pos": 2,
                 "score": 10,
                 "lap_data": [
@@ -208,13 +208,13 @@ async def test_get_heat_info(mock_fetch_and_parse, mock_gather_iter, heats, blan
 
     result = await get_heat_info(mock_logger, mock_session, LOCATIONS["atlanta"], heats)
 
-    assert RaceTypes.STANDARD == result["Atlanta"][1]["type"]
+    assert RaceTypes.STANDARD == result["Atlanta"][1]["race_type"]
 
     if isinstance(heats, int):
         assert 1 == len(result["Atlanta"])
     else:
         assert 2 == len(result["Atlanta"])
-        assert RaceTypes.JUNIOR == result["Atlanta"][2]["type"]
+        assert RaceTypes.JUNIOR == result["Atlanta"][2]["race_type"]
 
 
 @pytest.mark.asyncio
@@ -261,14 +261,14 @@ async def test_get_racer_data(
             "Location 1": {
                 1: {
                     "heat_id": 1,
-                    "type": RaceTypes.STANDARD,
+                    "race_type": RaceTypes.STANDARD,
                     "win_cond": WinConditions.BEST_LAP,
                     "time": now,
                     "track": 1,
                     "sessions": [
                         {
                             "name": "Test Racer",
-                            "id": 123,
+                            "rid": 123,
                             "pos": 1,
                             "score": 12,
                             "lap_data": [
@@ -279,7 +279,7 @@ async def test_get_racer_data(
                         },
                         {
                             "name": "Racer 2",
-                            "id": 246,
+                            "rid": 246,
                             "pos": 2,
                             "score": 10,
                             "lap_data": [
@@ -297,14 +297,14 @@ async def test_get_racer_data(
             "Location 2": {
                 1: {
                     "heat_id": 1,
-                    "type": RaceTypes.DRIFT,
+                    "race_type": RaceTypes.DRIFT,
                     "win_cond": WinConditions.BEST_LAP,
                     "time": now,
                     "track": 1,
                     "sessions": [
                         {
                             "name": "Test Racer",
-                            "id": 123,
+                            "rid": 123,
                             "pos": 1,
                             "score": 12,
                             "lap_data": [
@@ -315,7 +315,7 @@ async def test_get_racer_data(
                         },
                         {
                             "name": "Racer 3",
-                            "id": 369,
+                            "rid": 369,
                             "pos": 2,
                             "score": 10,
                             "lap_data": [
@@ -339,7 +339,7 @@ async def test_get_racer_data(
         assert {} == result
     else:
         assert "Test Racer" == result["name"]
-        assert 123 == result["id"]
+        assert 123 == result["rid"]
 
         if not got_heat_data:
             assert "sessions" not in result
@@ -508,14 +508,14 @@ async def test_watch_location(
                 "Atlanta": {
                     69: {
                         "heat_id": 1,
-                        "type": RaceTypes.STANDARD,
+                        "race_type": RaceTypes.STANDARD,
                         "win_cond": WinConditions.BEST_LAP,
                         "time": now,
                         "track": 1,
                         "sessions": [
                             {
                                 "name": "Racer 1",
-                                "id": 1,
+                                "rid": 1,
                                 "pos": 1,
                                 "score": 10,
                                 "lap_data": [
@@ -526,7 +526,7 @@ async def test_watch_location(
                             },
                             {
                                 "name": "Racer 2",
-                                "id": 2,
+                                "rid": 2,
                                 "pos": 2,
                                 "score": 4,
                                 "lap_data": [
@@ -537,7 +537,7 @@ async def test_watch_location(
                             },
                             {
                                 "name": "Racer 2",
-                                "id": 3,
+                                "rid": 3,
                                 "pos": 3,
                                 "score": 2,
                                 "lap_data": [
@@ -586,7 +586,7 @@ async def test_watch_location(
                 "location": loc["location"],
                 "track": 1,
                 "time": now,
-                "type": RaceTypes.STANDARD,
+                "race_type": RaceTypes.STANDARD,
                 "win_cond": WinConditions.BEST_LAP,
             },
         )
@@ -595,7 +595,7 @@ async def test_watch_location(
             None,
             [
                 {
-                    "id": 1,
+                    "rid": 1,
                     "location": loc["location"],
                     "track": 1,
                     "time": now,
@@ -605,7 +605,7 @@ async def test_watch_location(
                     "times": [(22.47, 1), (23.456, 1), (22.68, 1)],
                 },
                 {
-                    "id": 2,
+                    "rid": 2,
                     "location": loc["location"],
                     "track": 1,
                     "time": now,
@@ -615,7 +615,7 @@ async def test_watch_location(
                     "times": [(23.241, 2), (34.567, 2), (23.116, 2)],
                 },
                 {
-                    "id": 3,
+                    "rid": 3,
                     "location": loc["location"],
                     "track": 1,
                     "time": now,
@@ -676,28 +676,28 @@ def test_heat_parser(heat_type, blank_db):
             assert datetime(2021, 9, 5, 23, 10, tzinfo=utc) == result["time"]
             assert 1 == result["track"]
             assert 5 == len(result["sessions"])
-            assert RaceTypes.QUALIFIER == result["type"]
+            assert RaceTypes.QUALIFIER == result["race_type"]
 
         elif heat_type == "standard":
-            assert RaceTypes.STANDARD == result["type"]
+            assert RaceTypes.STANDARD == result["race_type"]
 
         elif heat_type == "junior":
-            assert RaceTypes.JUNIOR == result["type"]
+            assert RaceTypes.JUNIOR == result["race_type"]
 
         elif heat_type == "drift":
-            assert RaceTypes.DRIFT == result["type"]
+            assert RaceTypes.DRIFT == result["race_type"]
 
         elif heat_type == "ball":
-            assert RaceTypes.BALL_CHALLENGE == result["type"]
+            assert RaceTypes.BALL_CHALLENGE == result["race_type"]
 
         elif heat_type == "grid":
-            assert RaceTypes.GRID_RACE == result["type"]
+            assert RaceTypes.GRID_RACE == result["race_type"]
 
         elif heat_type == "practice":
-            assert RaceTypes.PRACTICE == result["type"]
+            assert RaceTypes.PRACTICE == result["race_type"]
 
         elif heat_type == "final":
-            assert RaceTypes.FINAL == result["type"]
+            assert RaceTypes.FINAL == result["race_type"]
 
     else:
         with pytest.raises(ValueError):

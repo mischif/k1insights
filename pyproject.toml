@@ -19,18 +19,20 @@ dynamic = ["version"]
 [project.optional-dependencies]
 test = [
 "coverage[toml]",
-"hypothesis",
-"hypothesis-pytest",
-"mypy; python_implementation != 'PyPy'",
+"flake8",
+"isort",
 "pytest >= 6.0",
 "pytest-cov",
 "pytest-asyncio",
+"mypy; python_implementation != 'PyPy'",
+"types-pytz; python_implementation != 'PyPy'",
+"typing-extensions; python_implementation != 'PyPy'",
 ]
 
 [project.urls]
 repository = "https://github.com/mischif/k1stats"
 
-[project.entry-points."console_scripts"]
+[project.scripts]
 k1-create-db = "k1stats.tools.create_db:main"
 k1-add-racer = "k1stats.tools.add_racer:main"
 k1-start-backend = "k1stats.backend.watchers:main"
@@ -45,10 +47,14 @@ requires = [
 
 [tool.setuptools]
 zip-safe = true
-include-package-data = false
-package-data = {k1stats = ["py.typed"]}
+#include-package-data = true
+#package-data = {k1stats = ["py.typed"]}
 #package-dir = {"" = "src"}
 #packages = {find = {where = ["src"], namespaces = false}}
+
+#[tool.setuptools.packages.find]
+#where = ["src"]
+#namespaces = false
 
 [tool.setuptools_scm]
 #version_scheme = "python-simplified-semver"
@@ -56,12 +62,12 @@ local_scheme = "no-local-version"
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ["py38"]
 
 [tool.isort]
 profile = "black"
 combine_star = true
-lines_after_imports = 2
+#lines_after_imports = 2
 lines_between_types = 1
 py_version = 38
 
@@ -75,10 +81,12 @@ disallow_subclassing_any = true
 disallow_untyped_calls = true
 disallow_untyped_decorators = true
 disallow_untyped_defs = true
-implicit_reexport = false
+implicit_reexport = true
+namespace_packages = true
 no_implicit_optional = true
 strict_optional = true
 strict_equality = true
+warn_incomplete_stub = true
 warn_no_return = true
 warn_redundant_casts = true
 warn_return_any = true

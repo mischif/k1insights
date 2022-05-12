@@ -33,28 +33,28 @@ def test_db(blank_db):
         {
             "location": "Atlanta",
             "track": 1,
-            "type": RaceTypes.STANDARD,
+            "race_type": RaceTypes.STANDARD,
             "win_cond": WinConditions.BEST_LAP,
             "time": now,
         },
         {
             "location": "Atlanta",
             "track": 1,
-            "type": RaceTypes.STANDARD,
+            "race_type": RaceTypes.STANDARD,
             "win_cond": WinConditions.BEST_LAP,
             "time": then,
         },
         {
             "location": "Atlanta",
             "track": 1,
-            "type": RaceTypes.STANDARD,
+            "race_type": RaceTypes.STANDARD,
             "win_cond": WinConditions.BEST_LAP,
             "time": yday,
         },
         {
             "location": "Atlanta",
             "track": 1,
-            "type": RaceTypes.STANDARD,
+            "race_type": RaceTypes.STANDARD,
             "win_cond": WinConditions.BEST_LAP,
             "time": ereyday,
         },
@@ -114,7 +114,7 @@ def test_db(blank_db):
         racers = sample(range(1, 11), len(heat_sessions))
         karts = sample(range(1, 11), len(heat_sessions))
         for idx, data in enumerate(zip(racers, karts, lap_times)):
-            heat_sessions[idx]["id"] = data[0]
+            heat_sessions[idx]["rid"] = data[0]
             heat_sessions[idx]["kart"] = data[1]
             heat_sessions[idx]["times"] = [(t[0], t[1] + 1) for t in data[2]]
             heat_sessions[idx]["pos"] = data[2][-1][1] + 1

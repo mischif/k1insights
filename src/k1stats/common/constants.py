@@ -1,10 +1,15 @@
+from __future__ import annotations
+
+from datetime import datetime
 from os import environ
 from pathlib import Path
+from typing import TypedDict
 
 from pytz import timezone
+from pytz.tzinfo import BaseTzInfo
 
 
-def __getattr__(name):
+def __getattr__(name: str) -> Path:
     if name == "DB_PATH":
         if "K1_DATA_DB" not in environ:
             raise RuntimeError("K1_DATA_DB not defined")
@@ -25,7 +30,7 @@ USER_LOOKBACK_DAYS = int(environ.get("K1_USER_LOOKBACK", 30))
 MAX_POOL_SIZE = int(environ.get("K1_POOL_SIZE", 100))
 MAX_CONCURRENT_TASKS = int(environ.get("K1_TASK_LIMIT", 10))
 
-LOCATIONS = {
+LOCATIONS: dict[str, K1Location] = {
     "atlanta": {
         "location": "Atlanta",
         "subdomain": "k1atlanta",
@@ -33,3 +38,42 @@ LOCATIONS = {
         "tz": timezone("US/Eastern"),
     },
 }
+
+
+class K1Location(TypedDict):
+    location: str
+    subdomain: str
+    tracks: int
+    tz: BaseTzInfo
+
+
+class HeatSession(TypedDict, total=False):
+    name: str
+    rid: int
+    pos: int
+    score: int
+    lap_data: list[tuple[float, int]]
+
+
+class HeatData(TypedDict, total=False):
+    heat_id: int
+    race_type: int
+    win_cond: int
+    time: datetime
+    track: int
+    sessions: list[HeatSession]
+    location: str
+
+
+class FullSession(TypedDict, total=False):
+    hid: int
+    rid: int
+    location: str
+    track: int
+    time: datetime
+    race_type: int
+    win_cond: int
+    kart: int
+    score: int
+    pos: int
+    times: list[tuple[float, int]]

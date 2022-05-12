@@ -1,20 +1,38 @@
-from datetime import datetime
+from __future__ import annotations
+
+from collections.abc import Callable
+from datetime import date, datetime
 from functools import partial
+from logging import Logger
 from operator import itemgetter
-from sqlite3 import PARSE_DECLTYPES, DatabaseError, Row, connect, register_converter
+from pathlib import Path
+from sqlite3 import (
+    PARSE_DECLTYPES,
+    Connection,
+    DatabaseError,
+    Row,
+    connect,
+    register_converter,
+)
+from typing import Any, cast
+
+from k1stats.common.constants import FullSession, HeatData
 
 
 class K1DB:
-
-    session_times = itemgetter(*(f"lap_{i}" for i in range(1, 51)))
-    get_best_lap = partial(lambda s: min(filter(None, K1DB.session_times(s))))
+    session_times: itemgetter[tuple[float, ...]] = itemgetter(
+        *(f"lap_{i}" for i in range(1, 51))
+    )
+    get_best_lap: Callable[[list[float]], float] = partial(
+        lambda s: min(filter(None, K1DB.session_times(s)))
+    )
 
     @staticmethod
-    def make_timestamp(ts):
+    def make_timestamp(ts: bytes) -> datetime:
         return datetime.fromisoformat(ts.decode())
 
     @staticmethod
-    def connect(logger, db_path):
+    def connect(logger: Logger, db_path: Path) -> Connection | None:
         result = None
         db = connect(db_path, detect_types=PARSE_DECLTYPES)
 
@@ -36,12 +54,18 @@ class K1DB:
         return result
 
     @staticmethod
-    def close(db):
+    def close(db: Connection) -> None:
         db.execute("PRAGMA optimize")
         db.close()
 
     @staticmethod
-    def add_racer(db, racer_id, name, is_fast=False, follow=False):
+    def add_racer(
+        db: Connection,
+        racer_id: int,
+        name: str,
+        is_fast: bool = False,
+        follow: bool = False,
+    ) -> None:
         with db:
             db.execute(
                 """
@@ -53,9 +77,9 @@ class K1DB:
             )
 
     @staticmethod
-    def add_heats(db, data):
+    def add_heats(db: Connection, data: HeatData | list[FullSession]) -> None:
         if isinstance(data, dict):
-            data = [data]
+            data = cast(list[FullSession], [data])
         elif not isinstance(data, list):
             raise ValueError("Provide data as dict or list of dicts")
 
@@ -67,13 +91,19 @@ class K1DB:
                 VALUES (?, ?, ?, ?, ?)
                 """,
                 (
-                    (h["location"], h["track"], h["time"], h["type"], h["win_cond"])
+                    (
+                        h["location"],
+                        h["track"],
+                        h["time"],
+                        h["race_type"],
+                        h["win_cond"],
+                    )
                     for h in data
                 ),
             )
 
     @staticmethod
-    def add_sessions(db, data):
+    def add_sessions(db: Connection, data: FullSession | list[FullSession]) -> None:
         if isinstance(data, dict):
             data = [data]
         elif not isinstance(data, list):
@@ -107,7 +137,7 @@ class K1DB:
                 (
                     (
                         s["hid"],
-                        s["id"],
+                        s["rid"],
                         s["pos"],
                         s["kart"],
                         s["score"],
@@ -136,8 +166,14 @@ class K1DB:
     #   return result
 
     @staticmethod
-    def location_ftd(db, loc, since, track=1, kart=None):
-        result = {}
+    def location_ftd(
+        db: Connection,
+        loc: str,
+        since: datetime | date,
+        track: int = 1,
+        kart: int | None = None,
+    ) -> dict[date, float | dict[int, float]]:
+        result: dict[date, Any] = {}
 
         with db:
             for session in db.execute(
@@ -167,7 +203,7 @@ class K1DB:
         return result
 
     @staticmethod
-    def create_db(dest):
+    def create_db(dest: Path) -> None:
         db = connect(dest)
         db.executescript(
             """

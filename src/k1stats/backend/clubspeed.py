@@ -1,16 +1,47 @@
+from __future__ import annotations
+
 from asyncio import sleep
 from base64 import b64decode, b64encode
-from datetime import datetime
-from functools import partial
+from collections.abc import Coroutine, Iterator, ValuesView
+from datetime import date, datetime
 from html.parser import HTMLParser
+from logging import Logger
+from sqlite3 import Connection
+from typing import Any, NoReturn, Type, TypedDict, TypeVar, cast
 from uuid import uuid4
 
 from aiohttp import ClientSession, TCPConnector
 from aioitertools.asyncio import gather_iter
 from pytz import utc
 
-from k1stats.common.constants import LOCATIONS, MAX_CONCURRENT_TASKS, MAX_POOL_SIZE
+from k1stats.common.constants import (
+    LOCATIONS,
+    MAX_CONCURRENT_TASKS,
+    MAX_POOL_SIZE,
+    FullSession,
+    HeatData,
+    HeatSession,
+    K1Location,
+)
 from k1stats.common.db import K1DB
+
+
+class BasicSession(TypedDict):
+    location: str
+    heat_id: int
+    kart: int
+    time: datetime
+
+
+class HistoryData(TypedDict, total=False):
+    name: str
+    sessions: dict[str, list[BasicSession]]
+
+
+class RacerData(TypedDict, total=False):
+    rid: int
+    name: str
+    sessions: list[FullSession]
 
 
 class WinConditions:
@@ -30,22 +61,22 @@ class RaceTypes:
 
 
 class HistoryParser(HTMLParser):
-    def __init__(self, loc_data):
+    def __init__(self, loc_data: K1Location):
         super().__init__()
         self._tz = loc_data["tz"]
         self._location = loc_data["location"]
         self._display_name = ""
-        self._sessions = []
+        self._sessions: list[BasicSession] = []
 
         self._getting_name = False
         self._getting_heat = False
         self._curr_col = 0
-        self._curr_heat = None
-        self._curr_kart = None
-        self._curr_time = None
+        self._curr_heat: int | None = None
+        self._curr_kart: int | None = None
+        self._curr_time: datetime | None = None
 
     @property
-    def data(self):
+    def data(self) -> HistoryData:
         return {
             "name": self._display_name,
             "sessions": {
@@ -54,11 +85,11 @@ class HistoryParser(HTMLParser):
         }
 
     @property
-    def display_name(self):
+    def display_name(self) -> str:
         return self._display_name
 
-    def handle_starttag(self, tag, attrs):
-        attr_dict = dict(attrs)
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attr_dict = {k: v for (k, v) in attrs if v is not None}
 
         if attr_dict.get("id") == "lblRacerName" and tag == "span":
             self._getting_name = True
@@ -72,19 +103,24 @@ class HistoryParser(HTMLParser):
         elif self._getting_heat and tag == "a":
             self._curr_heat = int(attr_dict["href"].split("=")[-1])
 
-    def handle_endtag(self, tag):
+    def handle_endtag(self, tag: str) -> None:
         if self._getting_name and tag == "span":
             self._getting_name = False
 
         if self._getting_heat and tag == "tr":
-            self._sessions.append(
-                {
-                    "location": self._location,
-                    "heat_id": self._curr_heat,
-                    "kart": self._curr_kart,
-                    "time": self._curr_time,
-                }
-            )
+            if (
+                self._curr_heat is not None
+                and self._curr_kart is not None
+                and self._curr_time is not None
+            ):
+                self._sessions.append(
+                    {
+                        "location": self._location,
+                        "heat_id": self._curr_heat,
+                        "kart": self._curr_kart,
+                        "time": self._curr_time,
+                    }
+                )
 
             self._curr_kart = None
             self._curr_heat = None
@@ -92,7 +128,7 @@ class HistoryParser(HTMLParser):
             self._curr_col = 0
             self._getting_heat = False
 
-    def handle_data(self, data):
+    def handle_data(self, data: str) -> None:
         if self._getting_name:
             self._display_name = data
 
@@ -105,16 +141,16 @@ class HistoryParser(HTMLParser):
 
 
 class HeatParser(HTMLParser):
-    def __init__(self, loc_data):
+    def __init__(self, loc_data: K1Location):
         super().__init__()
         self._tz = loc_data["tz"]
-        self._curr_heat = None
-        self._heat_type = None
-        self._win_cond = None
-        self._heat_time = None
+        self._curr_heat = cast(int, None)
+        self._heat_type = cast(int, None)
+        self._win_cond = cast(int, None)
+        self._heat_time = cast(datetime, None)
         self._track = 1
-        self._sessions = {}
-        self._curr_racer = {}
+        self._sessions: dict[str, HeatSession] = {}
+        self._curr_racer: HeatSession = {}
         self._top_racer_mod = 0
 
         self._getting_racer_name = False
@@ -130,17 +166,17 @@ class HeatParser(HTMLParser):
         self._getting_pos = False
 
     @property
-    def data(self):
+    def data(self) -> HeatData:
         return {
             "heat_id": self._curr_heat,
-            "type": self._heat_type,
+            "race_type": self._heat_type,
             "win_cond": self._win_cond,
             "time": self._heat_time,
             "track": self._track,
             "sessions": [
                 {
                     "name": name,
-                    "id": data["id"],
+                    "rid": data["rid"],
                     "pos": data["pos"],
                     "score": data["score"],
                     "lap_data": data["lap_data"],
@@ -149,8 +185,8 @@ class HeatParser(HTMLParser):
             ],
         }
 
-    def handle_starttag(self, tag, attrs):
-        attr_dict = dict(attrs)
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attr_dict = {k: v for (k, v) in attrs if v is not None}
 
         if tag == "span":
             if attr_dict.get("id") == "lblRaceType":
@@ -184,7 +220,9 @@ class HeatParser(HTMLParser):
                 self._getting_pos = True
 
         elif self._getting_racer_info and tag == "a":
-            self._curr_racer["id"] = int(b64decode(attr_dict["href"].split("=", 1)[-1]))
+            self._curr_racer["rid"] = int(
+                b64decode(attr_dict["href"].split("=", 1)[-1])
+            )
             self._getting_name = True
 
         elif attr_dict.get("class") == "LapTimes" and tag == "table":
@@ -196,7 +234,7 @@ class HeatParser(HTMLParser):
         elif tag == "form":
             self._curr_heat = int(attr_dict["action"].split("=")[-1])
 
-    def handle_endtag(self, tag):
+    def handle_endtag(self, tag: str) -> None:
         if tag == "span":
             if self._getting_type:
                 self._getting_type = False
@@ -236,7 +274,7 @@ class HeatParser(HTMLParser):
         elif self._getting_laps and tag == "table":
             self._getting_laps = False
 
-    def handle_data(self, data):
+    def handle_data(self, data: str) -> None:
         if self._getting_type:
             if data == ".STANDARD Race.":
                 self._heat_type = RaceTypes.STANDARD
@@ -302,13 +340,22 @@ class HeatParser(HTMLParser):
             self._curr_racer = self._sessions[data]
 
         elif self._getting_lap and len(data) > 3:
-            lap, pos = data.split()
-            lap = float(lap)
-            pos = int(pos[1:-1])
+            str_lap, str_pos = data.split()
+            lap = float(str_lap)
+            pos = int(str_pos[1:-1])
             self._curr_racer.setdefault("lap_data", []).append((lap, pos))
 
 
-async def fetch_and_parse(logger, session, parser_class, loc_data, url):
+ParserType = TypeVar("ParserType", HeatParser, HistoryParser)
+
+
+async def fetch_and_parse(
+    logger: Logger,
+    session: ClientSession,
+    parser_class: Type[ParserType],
+    loc_data: K1Location,
+    url: str,
+) -> ParserType | None:
     result = None
     parser = parser_class(loc_data)
 
@@ -323,9 +370,15 @@ async def fetch_and_parse(logger, session, parser_class, loc_data, url):
     return result
 
 
-async def get_racer_history(logger, session, k1_id, after, locs=LOCATIONS.values()):
-    result = {}
-    b64 = b64encode(str(k1_id).encode()).decode()
+async def get_racer_history(
+    logger: Logger,
+    session: ClientSession,
+    rid: int,
+    after: date,
+    locs: str | list[K1Location] | ValuesView[K1Location] = LOCATIONS.values(),
+) -> HistoryData:
+    result: HistoryData = {}
+    b64 = b64encode(str(rid).encode()).decode()
     url_base = (
         "https://{subd}.clubspeedtiming.com/sp_center/RacerHistory.aspx?CustID={b64_id}"
     )
@@ -341,7 +394,7 @@ async def get_racer_history(logger, session, k1_id, after, locs=LOCATIONS.values
     elif not isinstance(locs, type(LOCATIONS.values())):
         raise ValueError("Invalid K1 location")
 
-    loc_data_tasks = (
+    loc_data_tasks: Iterator[Coroutine[Any, Any, HistoryParser | None]] = (
         fetch_and_parse(
             logger,
             session,
@@ -351,7 +404,9 @@ async def get_racer_history(logger, session, k1_id, after, locs=LOCATIONS.values
         )
         for loc in locs
     )
-    loc_parsers = await gather_iter(loc_data_tasks, limit=MAX_CONCURRENT_TASKS)
+    loc_parsers: list[HistoryParser | None] = await gather_iter(
+        loc_data_tasks, limit=MAX_CONCURRENT_TASKS
+    )
 
     for parser in filter(None, loc_parsers):
         result.setdefault("name", parser.data["name"])
@@ -365,8 +420,10 @@ async def get_racer_history(logger, session, k1_id, after, locs=LOCATIONS.values
     return result
 
 
-async def get_heat_info(logger, session, loc, heats):
-    result = {loc["location"]: {}}
+async def get_heat_info(
+    logger: Logger, session: ClientSession, loc: K1Location, heats: int | list[int]
+) -> dict[str, dict[int, HeatData]]:
+    result: dict[str, dict[int, HeatData]] = {loc["location"]: {}}
     url_base = (
         "https://{subd}.clubspeedtiming.com/sp_center/HeatDetails.aspx?HeatNo={heat}"
     )
@@ -374,7 +431,7 @@ async def get_heat_info(logger, session, loc, heats):
     if isinstance(heats, int):
         heats = [heats]
 
-    heat_data_tasks = (
+    heat_data_tasks: Iterator[Coroutine[Any, Any, HeatParser | None]] = (
         fetch_and_parse(
             logger,
             session,
@@ -384,7 +441,9 @@ async def get_heat_info(logger, session, loc, heats):
         )
         for h in heats
     )
-    heat_parsers = await gather_iter(heat_data_tasks, limit=MAX_CONCURRENT_TASKS)
+    heat_parsers: list[HeatParser | None] = await gather_iter(
+        heat_data_tasks, limit=MAX_CONCURRENT_TASKS
+    )
 
     for parser in filter(None, heat_parsers):
         heat_data = parser.data
@@ -394,13 +453,13 @@ async def get_heat_info(logger, session, loc, heats):
     return result
 
 
-async def get_racer_data(logger, racer_id, after):
-    result = {}
+async def get_racer_data(logger: Logger, racer_id: int, after: datetime) -> RacerData:
+    result: RacerData = {}
     async with ClientSession(connector=TCPConnector(limit=MAX_POOL_SIZE)) as session:
         history = await get_racer_history(logger, session, racer_id, after)
         if history:
             heats_by_location = {}
-            result["id"] = racer_id
+            result["rid"] = racer_id
             result["name"] = history["name"]
 
             heat_data_tasks = []
@@ -408,7 +467,9 @@ async def get_racer_data(logger, racer_id, after):
                 loc = LOCATIONS[location.replace(" ", "_").lower()]
                 heats = [s["heat_id"] for s in session_list]
                 heat_data_tasks.append(get_heat_info(logger, session, loc, heats))
-            heat_data = await gather_iter(heat_data_tasks, limit=MAX_CONCURRENT_TASKS)
+            heat_data: list[dict[str, dict[int, HeatData]]] = await gather_iter(
+                heat_data_tasks, limit=MAX_CONCURRENT_TASKS
+            )
 
             for data in filter(None, heat_data):
                 heats_by_location.update(data)
@@ -421,7 +482,7 @@ async def get_racer_data(logger, racer_id, after):
                     try:
                         heat_session = next(
                             filter(
-                                lambda s: s["id"] == racer_id, heat.get("sessions", [])
+                                lambda s: s["rid"] == racer_id, heat.get("sessions", [])
                             )
                         )
                     except Exception:
@@ -429,11 +490,11 @@ async def get_racer_data(logger, racer_id, after):
                     else:
                         result.setdefault("sessions", []).append(
                             {
-                                "id": racer_id,
+                                "rid": racer_id,
                                 "location": location,
                                 "track": heat["track"],
                                 "time": hist_session["time"],
-                                "type": heat["type"],
+                                "race_type": heat["race_type"],
                                 "win_cond": heat["win_cond"],
                                 "kart": hist_session["kart"],
                                 "score": heat_session["score"],
@@ -444,7 +505,7 @@ async def get_racer_data(logger, racer_id, after):
     return result
 
 
-async def watch_location(logger, loc, db):
+async def watch_location(logger: Logger, loc: K1Location, db: Connection) -> NoReturn:
     params = {
         "clientId": str(uuid4()),
         "groups": "SP_Center.ScoreBoardHub.1",
@@ -458,8 +519,8 @@ async def watch_location(logger, loc, db):
         logger.info("Started %s live data fetcher", loc["location"])
 
         while True:
-            heat = {}
-            sessions = []
+            heat: HeatData = {}
+            sessions: list[FullSession] = []
             all_msgs = []
             heat_num = -1
             async with session.post(url, data=params) as res:
@@ -480,14 +541,14 @@ async def watch_location(logger, loc, db):
 
                 if not (data["RaceRunning"] or heat_num == last_heat):
                     last_heat = heat_num
-                    heat_data = await get_heat_info(logger, session, loc, heat_num)
-                    heat_data = heat_data[loc["location"]][heat_num]
+                    raw_heat = await get_heat_info(logger, session, loc, heat_num)
+                    heat_data = raw_heat[loc["location"]][heat_num]
                     all_sessions = heat_data["sessions"]
                     heat = {
                         "location": loc["location"],
                         "track": heat_data["track"],
                         "time": heat_data["time"],
-                        "type": heat_data["type"],
+                        "race_type": heat_data["race_type"],
                         "win_cond": heat_data["win_cond"],
                     }
 
@@ -502,20 +563,30 @@ async def watch_location(logger, loc, db):
                         racer_id = int(racer["CustID"])
                         K1DB.add_racer(db, racer_id, racer["RacerName"])
 
-                        right_sess = partial(lambda rid, s: s["id"] == rid, racer_id)
-                        sess = next(filter(right_sess, all_sessions))
-                        sessions.append(
-                            {
-                                "id": racer_id,
-                                "location": loc["location"],
-                                "track": heat_data["track"],
-                                "time": heat_data["time"],
-                                "kart": int(racer["AutoNo"]),
-                                "score": sess["score"],
-                                "pos": sess["pos"],
-                                "times": sess["lap_data"],
-                            }
-                        )
+                        def _get_session(
+                            sessions: list[HeatSession],
+                        ) -> HeatSession | None:
+                            result = None
+                            for session in sessions:
+                                if session["rid"] == racer_id:
+                                    result = session
+                                    break
+                            return result
+
+                        sess = _get_session(all_sessions)
+                        if sess is not None:
+                            sessions.append(
+                                {
+                                    "rid": racer_id,
+                                    "location": loc["location"],
+                                    "track": heat_data["track"],
+                                    "time": heat_data["time"],
+                                    "kart": int(racer["AutoNo"]),
+                                    "score": sess["score"],
+                                    "pos": sess["pos"],
+                                    "times": sess["lap_data"],
+                                }
+                            )
 
                     K1DB.add_sessions(db, sessions)
                     logger.debug(

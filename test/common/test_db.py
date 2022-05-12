@@ -67,7 +67,7 @@ def test_add_heats(scenario, blank_db):
         heats = {
             "location": "Atlanta",
             "track": 1,
-            "type": RaceTypes.STANDARD,
+            "race_type": RaceTypes.STANDARD,
             "win_cond": WinConditions.BEST_LAP,
             "time": now,
         }
@@ -76,21 +76,21 @@ def test_add_heats(scenario, blank_db):
             {
                 "location": "Atlanta",
                 "track": 1,
-                "type": RaceTypes.STANDARD,
+                "race_type": RaceTypes.STANDARD,
                 "win_cond": WinConditions.BEST_LAP,
                 "time": now,
             },
             {
                 "location": "Atlanta",
                 "track": 1,
-                "type": RaceTypes.JUNIOR,
+                "race_type": RaceTypes.JUNIOR,
                 "win_cond": WinConditions.BEST_LAP,
                 "time": yday,
             },
             {
                 "location": "Atlanta",
                 "track": 1,
-                "type": RaceTypes.FINAL,
+                "race_type": RaceTypes.FINAL,
                 "win_cond": WinConditions.POSITION,
                 "time": now,
             },
@@ -120,7 +120,7 @@ def test_add_sessions(scenario, blank_db):
 
     if scenario == "single":
         sessions = {
-            "id": 1,
+            "rid": 1,
             "pos": 1,
             "kart": 1,
             "track": 1,
@@ -132,7 +132,7 @@ def test_add_sessions(scenario, blank_db):
     elif scenario == "multiple":
         sessions = [
             {
-                "id": 1,
+                "rid": 1,
                 "pos": 1,
                 "kart": 1,
                 "track": 1,
@@ -142,7 +142,7 @@ def test_add_sessions(scenario, blank_db):
                 "times": [(22.47, 1), (23.456, 1), (22.68, 1)],
             },
             {
-                "id": 2,
+                "rid": 2,
                 "pos": 2,
                 "kart": 2,
                 "track": 1,
@@ -152,7 +152,7 @@ def test_add_sessions(scenario, blank_db):
                 "times": [(23.241, 2), (34.567, 2), (23.116, 2)],
             },
             {
-                "id": 1,
+                "rid": 1,
                 "pos": 1,
                 "kart": 3,
                 "track": 1,
@@ -168,7 +168,7 @@ def test_add_sessions(scenario, blank_db):
     heat = {
         "location": "Atlanta",
         "track": 1,
-        "type": RaceTypes.STANDARD,
+        "race_type": RaceTypes.STANDARD,
         "win_cond": WinConditions.BEST_LAP,
         "time": now,
     }

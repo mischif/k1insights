@@ -59,7 +59,7 @@ def test_main(mock_logger, mock_get_data, mock_k1db, mock_exit, scenario, blank_
                     "win_cond": 0,
                 },
             ],
-            "id": 123,
+            "rid": 123,
             "name": "Test Racer",
         }
 
