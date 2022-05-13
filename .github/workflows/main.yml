@@ -11,8 +11,9 @@ on:
       - published
 
 jobs:
-  checks:
+  test:
     name: Check Python ${{ matrix.python-version }} on ${{ matrix.runs-on }}
+    environment: CI
     runs-on: ${{ matrix.runs-on }}
     strategy:
       fail-fast: false
@@ -29,16 +30,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install package
-        run: pip install .[test]
+        run: pip install -e .[test]
 
-      - name: Test package
-        run: pytest
+      - name: Run unit tests
+        uses: paambaati/codeclimate-action@v3.0.0
+        env:
+          CC_TEST_REPORTER_ID: ${{secrets.CC_REPORTER_ID}}
+        with:
+          coverageCommand: pytest --cov-report=xml
 
   # dist:
   #   name: Distribution build
