@@ -1,3 +1,10 @@
+################################################################################
+#                               K1 Data Insights                               #
+#   Capture K1 results to find hidden trends; pls don't call it data science   #
+#                            (C) 2022, Jeremy Brown                            #
+#                Released under Prosperity Public License 3.0.0                #
+################################################################################
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -6,8 +13,8 @@ from typing import Any, cast
 from flask import g, render_template
 from flask.views import View
 
-from k1stats.common.constants import KART_LOOKBACK_DAYS, K1Location
-from k1stats.common.db import K1DB
+from k1insights.common.constants import KART_LOOKBACK_DAYS, K1Location
+from k1insights.common.db import K1DB
 
 
 class KartView(View):

@@ -7,8 +7,8 @@ import pytest
 
 from pytz import utc
 
-from k1stats.backend.clubspeed import RaceTypes, WinConditions
-from k1stats.common.db import K1DB
+from k1insights.backend.clubspeed import RaceTypes, WinConditions
+from k1insights.common.db import K1DB
 
 
 @pytest.fixture()
@@ -19,7 +19,7 @@ def blank_db(tmp_path, monkeypatch):
     db = K1DB.connect(None, db_path)
     yield db
     K1DB.close(db)
-    sys.modules.pop("k1stats.common.constants", None)
+    sys.modules.pop("k1insights.common.constants", None)
 
 
 @pytest.fixture()
@@ -138,7 +138,7 @@ def test_db(blank_db):
 
 @pytest.fixture()
 def test_client(test_db):
-    from k1stats.frontend import app
+    from k1insights.frontend import app
 
     app.testing = True
     return app.test_client()

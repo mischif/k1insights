@@ -1,3 +1,10 @@
+################################################################################
+#                               K1 Data Insights                               #
+#   Capture K1 results to find hidden trends; pls don't call it data science   #
+#                            (C) 2022, Jeremy Brown                            #
+#                Released under Prosperity Public License 3.0.0                #
+################################################################################
+
 from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
@@ -7,9 +14,10 @@ from queue import SimpleQueue
 
 from anyio import create_task_group, run
 
-from k1stats.backend.clubspeed import watch_location
-from k1stats.common.constants import DB_PATH, LOCATIONS
-from k1stats.common.db import K1DB
+from k1insights.backend.clubspeed import watch_location
+from k1insights.common.constants import DB_PATH, LOCATIONS
+from k1insights.common.db import K1DB
+
 
 LOG = getLogger(__name__)
 

@@ -5,12 +5,12 @@ import pytest
 
 
 @pytest.mark.parametrize("scenario", ["bad-start", "good-start", "no-start"])
-@patch("k1stats.tools.add_racer.exit")
-@patch("k1stats.tools.add_racer.K1DB")
-@patch("k1stats.tools.add_racer.get_racer_data")
-@patch("k1stats.tools.add_racer.getLogger")
+@patch("k1insights.tools.add_racer.exit")
+@patch("k1insights.tools.add_racer.K1DB")
+@patch("k1insights.tools.add_racer.get_racer_data")
+@patch("k1insights.tools.add_racer.getLogger")
 def test_main(mock_logger, mock_get_data, mock_k1db, mock_exit, scenario, blank_db):
-    from k1stats.tools.add_racer import main
+    from k1insights.tools.add_racer import main
 
     args = ["123"]
 

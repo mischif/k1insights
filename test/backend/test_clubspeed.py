@@ -8,7 +8,7 @@ import pytest
 from aiohttp import ClientResponse, ClientSession
 from pytz import utc
 
-from k1stats.backend.clubspeed import (
+from k1insights.backend.clubspeed import (
     HeatParser,
     HistoryParser,
     RaceTypes,
@@ -19,7 +19,7 @@ from k1stats.backend.clubspeed import (
     get_racer_history,
     watch_location,
 )
-from k1stats.common.constants import LOCATIONS
+from k1insights.common.constants import LOCATIONS
 
 
 @pytest.mark.asyncio
@@ -50,8 +50,8 @@ async def test_fetch_and_parse(return_code, blank_db):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("location", [None, "atl", "atlanta", 1])
-@patch("k1stats.backend.clubspeed.gather_iter", new_callable=AsyncMock)
-@patch("k1stats.backend.clubspeed.fetch_and_parse")
+@patch("k1insights.backend.clubspeed.gather_iter", new_callable=AsyncMock)
+@patch("k1insights.backend.clubspeed.fetch_and_parse")
 async def test_get_racer_history(
     mock_fetch_and_parse, mock_gather_iter, blank_db, location
 ):
@@ -129,8 +129,8 @@ async def test_get_racer_history(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("heats", [1, [1, 2]])
-@patch("k1stats.backend.clubspeed.gather_iter", new_callable=AsyncMock)
-@patch("k1stats.backend.clubspeed.fetch_and_parse")
+@patch("k1insights.backend.clubspeed.gather_iter", new_callable=AsyncMock)
+@patch("k1insights.backend.clubspeed.fetch_and_parse")
 async def test_get_heat_info(mock_fetch_and_parse, mock_gather_iter, heats, blank_db):
     mock_logger = Mock()
     mock_session = Mock()
@@ -221,10 +221,10 @@ async def test_get_heat_info(mock_fetch_and_parse, mock_gather_iter, heats, blan
 @pytest.mark.parametrize(
     "got_history, got_heat_data", [[False, False], [True, False], [True, True]]
 )
-@patch("k1stats.backend.clubspeed.LOCATIONS", {"location_1": {}, "location_2": {}})
-@patch("k1stats.backend.clubspeed.get_heat_info")
-@patch("k1stats.backend.clubspeed.get_racer_history")
-@patch("k1stats.backend.clubspeed.ClientSession")
+@patch("k1insights.backend.clubspeed.LOCATIONS", {"location_1": {}, "location_2": {}})
+@patch("k1insights.backend.clubspeed.get_heat_info")
+@patch("k1insights.backend.clubspeed.get_racer_history")
+@patch("k1insights.backend.clubspeed.ClientSession")
 async def test_get_racer_data(
     mock_session, mock_get_history, mock_get_info, got_history, got_heat_data, blank_db
 ):
@@ -369,10 +369,10 @@ async def test_get_racer_data(
         [True, False, True],
     ],
 )
-@patch("k1stats.backend.clubspeed.sleep", side_effect=CancelledError)
-@patch("k1stats.backend.clubspeed.K1DB")
-@patch("k1stats.backend.clubspeed.get_heat_info")
-@patch("k1stats.backend.clubspeed.ClientSession", spec=ClientSession)
+@patch("k1insights.backend.clubspeed.sleep", side_effect=CancelledError)
+@patch("k1insights.backend.clubspeed.K1DB")
+@patch("k1insights.backend.clubspeed.get_heat_info")
+@patch("k1insights.backend.clubspeed.ClientSession", spec=ClientSession)
 async def test_watch_location(
     mock_session,
     mock_get_info,

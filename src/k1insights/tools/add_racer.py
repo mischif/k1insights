@@ -1,3 +1,10 @@
+################################################################################
+#                               K1 Data Insights                               #
+#   Capture K1 results to find hidden trends; pls don't call it data science   #
+#                            (C) 2022, Jeremy Brown                            #
+#                Released under Prosperity Public License 3.0.0                #
+################################################################################
+
 from __future__ import annotations
 
 from argparse import Action, ArgumentParser, Namespace
@@ -10,9 +17,10 @@ from typing import Any, cast
 
 from pytz import utc
 
-from k1stats.backend.clubspeed import get_racer_data
-from k1stats.common.constants import DB_PATH
-from k1stats.common.db import K1DB
+from k1insights.backend.clubspeed import get_racer_data
+from k1insights.common.constants import DB_PATH
+from k1insights.common.db import K1DB
+
 
 START_OF_LAST_YEAR = datetime(date.today().year - 1, 1, 1, tzinfo=utc)
 
@@ -36,27 +44,27 @@ def main(args: list[str] | None = None) -> None:
     parser = ArgumentParser(
         prog="k1-add-racer",
         description="Manually add data for K1 racer",
-        epilog="Released under version 3.0.0 of the Prosperity Public License",
+        epilog="Released under Prosperity Public License 3.0.0",
     )
 
     parser.add_argument(
         "id",
         type=int,
-        help="gzipped rstats logfile",
+        help="K1 racer number",
     )
 
     parser.add_argument(
         "-f",
         "--fast",
         action="store_true",
-        help="gzipped rstats logfile",
+        help="Toggle if the racer should be considered fast",
     )
 
     parser.add_argument(
         "-t",
         "--track",
         action="store_true",
-        help="gzipped rstats logfile",
+        help="Toggle if special effort should be made to obtain the racer's races",
     )
 
     parser.add_argument(
@@ -64,7 +72,7 @@ def main(args: list[str] | None = None) -> None:
         "--start",
         action=GetHistoryCutoff,
         default=START_OF_LAST_YEAR,
-        help="gzipped rstats logfile",
+        help="Date to begin fetching session history, defaults to Jan 1 of last year",
     )
 
     parsed: Namespace = parser.parse_args(args)

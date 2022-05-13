@@ -13,11 +13,11 @@ def test_db_path(scenario, tmp_path, monkeypatch):
 
     if scenario == "no-path":
         with pytest.raises(RuntimeError):
-            from k1stats.common.constants import DB_PATH
+            from k1insights.common.constants import DB_PATH
     elif scenario == "bad-path":
         with pytest.raises(ValueError):
-            from k1stats.common.constants import DB_PATH
+            from k1insights.common.constants import DB_PATH
     else:
-        from k1stats.common.constants import DB_PATH
+        from k1insights.common.constants import DB_PATH
 
         assert db_path.absolute() == DB_PATH

@@ -8,8 +8,8 @@ import pytest
 
 from pytz import utc
 
-from k1stats.backend.clubspeed import RaceTypes, WinConditions
-from k1stats.common.db import K1DB
+from k1insights.backend.clubspeed import RaceTypes, WinConditions
+from k1insights.common.db import K1DB
 
 
 @pytest.mark.parametrize("scenario", ["bad-db", "bad-tegridy", "bad-fk", "good"])

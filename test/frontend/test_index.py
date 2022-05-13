@@ -1,4 +1,4 @@
-from k1stats.common.constants import LOCATIONS
+from k1insights.common.constants import LOCATIONS
 
 
 def test_index(test_client):

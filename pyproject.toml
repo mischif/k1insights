@@ -1,63 +1,54 @@
 [project]
-name = "k1stats"
-#description = ""
-#readme = "README.md"
+name = "k1insights"
+description = "A set of tools to perform basic introspection of K1 race results"
+readme = "README.md"
 requires-python = "~=3.8"
-license = {file = "LICENSE.txt"}
+license = {file = "LICENSE.md"}
 
 authors = [{name = "Jeremy Brown", email = "mischif@users.noreply.github.com"}]
 
 dependencies = [
-"aiohttp>=3.8.0",
-"flask>=2.1.0",
-"anyio>=3.5.0",
-"aioitertools>=0.10.0",
-]
+    "aiohttp>=3.8.0",
+    "flask>=2.1.0",
+    "anyio>=3.5.0",
+    "aioitertools>=0.10.0",
+    ]
 
 dynamic = ["version"]
 
 [project.optional-dependencies]
 test = [
-"coverage[toml]",
-"flake8",
-"isort",
-"pytest >= 6.0",
-"pytest-cov",
-"pytest-asyncio",
-"mypy; python_implementation != 'PyPy'",
-"types-pytz; python_implementation != 'PyPy'",
-"typing-extensions; python_implementation != 'PyPy'",
-]
+    "coverage[toml]",
+    "flake8",
+    "isort",
+    "pytest >= 6.0",
+    "pytest-cov",
+    "pytest-asyncio",
+    "mypy; python_implementation != 'PyPy'",
+    "types-pytz; python_implementation != 'PyPy'",
+    "typing-extensions; python_implementation != 'PyPy'",
+    ]
 
 [project.urls]
-repository = "https://github.com/mischif/k1stats"
+repository = "https://github.com/mischif/k1insights"
 
 [project.scripts]
-k1-create-db = "k1stats.tools.create_db:main"
-k1-add-racer = "k1stats.tools.add_racer:main"
-k1-start-backend = "k1stats.backend.watchers:main"
+k1-create-db = "k1insights.tools.create_db:main"
+k1-add-racer = "k1insights.tools.add_racer:main"
+k1-start-backend = "k1insights.backend.watchers:main"
 
 [build-system]
 build-backend = "setuptools.build_meta"
 requires = [
-	"setuptools >= 61.0.0",
-	"setuptools_scm[toml] >= 3.5.0",
-	"wheel",
-	]
+    "setuptools >= 61.0.0",
+    "setuptools_scm[toml] >= 3.5.0",
+    "wheel",
+    ]
 
 [tool.setuptools]
 zip-safe = true
-#include-package-data = true
-#package-data = {k1stats = ["py.typed"]}
-#package-dir = {"" = "src"}
-#packages = {find = {where = ["src"], namespaces = false}}
-
-#[tool.setuptools.packages.find]
-#where = ["src"]
-#namespaces = false
 
 [tool.setuptools_scm]
-#version_scheme = "python-simplified-semver"
 local_scheme = "no-local-version"
 
 [tool.black]
@@ -67,7 +58,7 @@ target-version = ["py38"]
 [tool.isort]
 profile = "black"
 combine_star = true
-#lines_after_imports = 2
+lines_after_imports = 2
 lines_between_types = 1
 py_version = 38
 
@@ -102,6 +93,6 @@ skip_covered = true
 skip_empty = true
 
 [tool.pytest.ini_options]
-addopts = "-v --lf --cov=k1stats --cov-report term"
+addopts = "-v --lf --cov=k1insights --cov-report term"
 asyncio_mode = "strict"
 testpaths = ["test"]

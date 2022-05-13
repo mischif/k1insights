@@ -1,3 +1,10 @@
+################################################################################
+#                               K1 Data Insights                               #
+#   Capture K1 results to find hidden trends; pls don't call it data science   #
+#                            (C) 2022, Jeremy Brown                            #
+#                Released under Prosperity Public License 3.0.0                #
+################################################################################
+
 from __future__ import annotations
 
 from asyncio import sleep
@@ -14,7 +21,7 @@ from aiohttp import ClientSession, TCPConnector
 from aioitertools.asyncio import gather_iter
 from pytz import utc
 
-from k1stats.common.constants import (
+from k1insights.common.constants import (
     LOCATIONS,
     MAX_CONCURRENT_TASKS,
     MAX_POOL_SIZE,
@@ -23,7 +30,7 @@ from k1stats.common.constants import (
     HeatSession,
     K1Location,
 )
-from k1stats.common.db import K1DB
+from k1insights.common.db import K1DB
 
 
 class BasicSession(TypedDict):

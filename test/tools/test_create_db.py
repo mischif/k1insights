@@ -2,13 +2,13 @@ from unittest.mock import patch
 
 import pytest
 
-from k1stats.tools.create_db import main
+from k1insights.tools.create_db import main
 
 
 @pytest.mark.parametrize(
     "exists, overwrite", [[False, False], [True, False], [True, True]]
 )
-@patch("k1stats.tools.create_db.exit")
+@patch("k1insights.tools.create_db.exit")
 def test_main(mock_exit, exists, overwrite, tmp_path):
     dest_path = tmp_path.joinpath("test_create_db.db")
 

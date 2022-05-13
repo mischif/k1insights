@@ -1,23 +1,30 @@
+################################################################################
+#                               K1 Data Insights                               #
+#   Capture K1 results to find hidden trends; pls don't call it data science   #
+#                            (C) 2022, Jeremy Brown                            #
+#                Released under Prosperity Public License 3.0.0                #
+################################################################################
+
 from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from sys import exit
 
-from k1stats.common.db import K1DB
+from k1insights.common.db import K1DB
 
 
 def main(args: list[str] | None = None) -> None:
     parser = ArgumentParser(
         prog="k1-create-db",
         description="Creates database to store K1 race data",
-        epilog="Released under version 3.0.0 of the Prosperity Public License",
+        epilog="Released under Prosperity Public License 3.0.0",
     )
 
     parser.add_argument(
         "dest",
         type=Path,
-        help="gzipped rstats logfile",
+        help="Destination of new db file",
     )
 
     parser.add_argument(
@@ -25,7 +32,7 @@ def main(args: list[str] | None = None) -> None:
         "--force",
         action="store_true",
         dest="overwrite",
-        help="gzipped rstats logfile",
+        help="Toggle to overwrite existing file when creating database",
     )
 
     parsed: Namespace = parser.parse_args(args)
