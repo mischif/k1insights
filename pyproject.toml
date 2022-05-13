@@ -9,9 +9,10 @@ authors = [{name = "Jeremy Brown", email = "mischif@users.noreply.github.com"}]
 
 dependencies = [
     "aiohttp>=3.8.0",
-    "flask>=2.1.0",
-    "anyio>=3.5.0",
     "aioitertools>=0.10.0",
+    "anyio>=3.5.0",
+    "flask>=2.1.0",
+    "pytz>=2021.1",
     ]
 
 dynamic = ["version"]
