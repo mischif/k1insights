@@ -652,6 +652,7 @@ def test_history_parser(blank_db):
     "heat_type",
     [
         "standard",
+        "junior",
         "drift",
         "ball",
         "grid",
