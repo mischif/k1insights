@@ -87,7 +87,7 @@ textarea {
    Author's custom styles
    ========================================================================== */
 
-.grid {  
+.grid {
   display: grid;
   grid-template-columns: 1fr 4fr;
   gap: 0px 0px;
@@ -267,4 +267,3 @@ textarea {
     page-break-after: avoid;
   }
 }
-

@@ -14,7 +14,7 @@ from datetime import date, datetime
 from html.parser import HTMLParser
 from logging import Logger
 from sqlite3 import Connection
-from typing import Any, NoReturn, Type, TypedDict, TypeVar, cast
+from typing import Any, NoReturn, TypedDict, TypeVar, cast
 from uuid import uuid4
 
 from aiohttp import ClientSession, TCPConnector
@@ -359,7 +359,7 @@ ParserType = TypeVar("ParserType", HeatParser, HistoryParser)
 async def fetch_and_parse(
     logger: Logger,
     session: ClientSession,
-    parser_class: Type[ParserType],
+    parser_class: type[ParserType],
     loc_data: K1Location,
     url: str,
 ) -> ParserType | None:
