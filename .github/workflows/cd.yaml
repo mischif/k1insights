@@ -1,0 +1,47 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+jobs:
+  test-deploy:
+    if: >-
+      github.event.workflow_run.conclusion == 'success'
+      && (github.event.workflow_run.event == 'workflow_dispatch'
+      ||  github.event.workflow_run.event == 'push')
+    name: Create TestPyPI release
+    environment: CI
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.8"
+
+      - name: Prepare build dependencies
+        run: pip install -U build twine
+
+      - name: Fetch tag history
+        run: git fetch --prune --unshallow --tags
+
+      - name: Build distributions
+        run: python -m build
+
+      - name: Get release version
+        run: |
+          echo release version is $(python setup.py --version)
+
+      - name: Check distributions
+        run: twine check dist/*
+
+      - name: Publish distributions
+        uses: pypa/gh-action-pypi-publish@v1.5.0
+        with:
+          user: __token__
+          password: ${{ secrets.TESTPYPI }}
+          repository_url: https://test.pypi.org/legacy/
