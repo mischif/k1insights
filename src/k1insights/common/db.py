@@ -86,7 +86,7 @@ class K1DB:
     @staticmethod
     def add_heats(db: Connection, data: HeatData | list[FullSession]) -> None:
         if isinstance(data, dict):
-            data = cast(list[FullSession], [data])
+            data = [cast(FullSession, data)]
         elif not isinstance(data, list):
             raise ValueError("Provide data as dict or list of dicts")
 
@@ -179,7 +179,7 @@ class K1DB:
         since: datetime | date,
         track: int = 1,
         kart: int | None = None,
-    ) -> dict[date, float | dict[int, float]]:
+    ) -> dict[date, float] | dict[date, dict[int, float]]:
         result: dict[date, Any] = {}
 
         with db:

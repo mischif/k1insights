@@ -33,7 +33,8 @@ class LocationView(View):
             times[track] = track_times
 
             for day_times in track_times.values():
-                all_karts.update(cast(dict[int, float], day_times).keys())
+                if isinstance(day_times, dict):
+                    all_karts.update(day_times.keys())
 
         ctx = {
             "records": times,
