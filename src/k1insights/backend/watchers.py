@@ -11,6 +11,7 @@ from argparse import ArgumentParser, Namespace
 from logging import DEBUG, INFO, LogRecord, StreamHandler, getLogger
 from logging.handlers import QueueHandler, QueueListener
 from queue import SimpleQueue
+from sys import stdout
 
 from anyio import create_task_group, run
 
@@ -52,7 +53,7 @@ def main(args: list[str] | None = None) -> None:
 
     log_queue: SimpleQueue[LogRecord] = SimpleQueue()
     q_hdlr = QueueHandler(log_queue)
-    stdout_hdlr = StreamHandler()
+    stdout_hdlr = StreamHandler(stdout)
 
     service_logger = getLogger(__name__.split(".")[0])
     service_logger.addHandler(q_hdlr)

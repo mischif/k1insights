@@ -8,11 +8,11 @@ license = {file = "LICENSE.md"}
 authors = [{name = "Jeremy Brown", email = "mischif@users.noreply.github.com"}]
 
 dependencies = [
-    "aiohttp>=3.8.0",
-    "aioitertools>=0.10.0",
-    "anyio>=3.5.0",
-    "flask>=2.1.0",
-    "pytz>=2021.1",
+    "aiohttp==3.8.1",
+    "aioitertools==0.10.0",
+    "anyio==3.5.0",
+    "flask==2.1.1",
+    "pytz==2021.1",
     ]
 
 dynamic = ["version"]
@@ -25,6 +25,10 @@ test = [
     "pytest-asyncio",
     ]
 
+run = [
+    "gunicorn==20.1.0",
+    "supervisor==4.2.4",
+    ]
 [project.urls]
 repository = "https://github.com/mischif/k1insights"
 
@@ -32,6 +36,7 @@ repository = "https://github.com/mischif/k1insights"
 k1-create-db = "k1insights.tools.create_db:main"
 k1-add-racer = "k1insights.tools.add_racer:main"
 k1-start-backend = "k1insights.backend.watchers:main"
+k1-start-all = "supervisor.supervisord:main"
 
 [build-system]
 build-backend = "setuptools.build_meta"

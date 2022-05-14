@@ -577,7 +577,7 @@ async def test_watch_location(
         mock_logger.debug.assert_any_call(
             "%s race beginning at %s UTC has finished", loc["location"], now.time()
         )
-        mock_logger.debug.assert_any_call(
+        mock_logger.info.assert_any_call(
             "Saved data for %s %s race", now.time(), loc["location"]
         )
         mock_k1db.add_heats.assert_called_once_with(

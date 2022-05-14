@@ -596,7 +596,7 @@ async def watch_location(logger: Logger, loc: K1Location, db: Connection) -> NoR
                             )
 
                     K1DB.add_sessions(db, sessions)
-                    logger.debug(
+                    logger.info(
                         "Saved data for %s %s race",
                         heat["time"].time(),
                         heat["location"],
