@@ -1,0 +1,53 @@
+# fly.toml file generated for k1insights on 2022-05-14T09:31:45-04:00
+
+app = "k1insights"
+
+kill_signal = "SIGINT"
+kill_timeout = 5
+processes = []
+
+[build]
+  build-target = "deploy"
+
+[env]
+  K1_DATA_DB = "/data/k1.db"
+  K1_KART_LOOKBACK = 14
+  K1_LOCATION_LOOKBACK = 7
+  K1_POOL_SIZE = 100
+  K1_TASK_LIMIT = 20
+  K1_USER_LOOKBACK = 30
+
+[mounts]
+  source = "k1data"
+  destination = "/data"
+
+[[services]]
+  http_checks = []
+  internal_port = 5000
+  processes = ["app"]
+  protocol = "tcp"
+  script_checks = []
+
+  [services.concurrency]
+    hard_limit = 25
+    soft_limit = 20
+    type = "connections"
+
+  [[services.ports]]
+    force_https = true
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [[services.tcp_checks]]
+    grace_period = "1s"
+    interval = "15s"
+    restart_limit = 0
+    timeout = "2s"
+
+[experimental]
+  allowed_public_ports = []
+  auto_rollback = true
