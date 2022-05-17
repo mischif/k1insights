@@ -23,29 +23,61 @@ from k1insights.common.constants import LOCATIONS
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("return_code", [200, 404])
-async def test_fetch_and_parse(return_code, blank_db):
+@pytest.mark.parametrize(
+    "scenario",
+    ["bad-status", "normal-keyerror", "wonky-keyerror", "other-error", "good"],
+)
+async def test_fetch_and_parse(scenario, blank_db):
     mock_logger = Mock()
     mock_parser = Mock()
     mock_parser.return_value = mock_parser
     mock_session = AsyncMock(spec=ClientSession)
 
-    mock_session.get.return_value.__aenter__.return_value.status = return_code
+    if scenario == "bad-status":
+        mock_session.get.return_value.__aenter__.return_value.status = 404
+    else:
+        mock_session.get.return_value.__aenter__.return_value.status = 200
+
+    if scenario == "normal-keyerror":
+        mock_session.get.return_value.__aenter__.return_value.text.return_value = (
+            "Server Error"
+        )
+        mock_parser.feed.side_effect = KeyError("Expected KeyError")
+    elif scenario == "wonky-keyerror":
+        mock_session.get.return_value.__aenter__.return_value.text.return_value = (
+            "Other Error"
+        )
+        mock_parser.feed.side_effect = KeyError("Unexpected KeyError")
+    elif scenario == "other-error":
+        mock_session.get.return_value.__aenter__.return_value.text.return_value = (
+            "Other Error"
+        )
+        mock_parser.feed.side_effect = Exception("Unexpected Exception")
 
     result = await fetch_and_parse(
         mock_logger, mock_session, mock_parser, None, "http://example.com"
     )
 
-    if return_code == 200:
+    if scenario == "good":
         assert result is mock_parser
     else:
         assert result is None
-        mock_logger.error.assert_called_once_with(
-            "Got bad status code fetching URL: %s", return_code
-        )
-        mock_logger.debug.assert_called_once_with(
-            "Source URL: %s", "http://example.com"
-        )
+
+        if scenario == "bad-status":
+            mock_logger.error.assert_called_once_with(
+                "Fetching URL returned bad status code: %s", 404
+            )
+            mock_logger.debug.assert_called_once_with(
+                "Source URL: %s", "http://example.com"
+            )
+        elif scenario == "normal-keyerror":
+            mock_logger.error.assert_called_once_with(
+                "K1 could not provide valid response for URL %s", "http://example.com"
+            )
+        else:
+            mock_logger.exception.assert_called_once_with(
+                "Failed to parse response for URL %s", "http://example.com"
+            )
 
 
 @pytest.mark.asyncio
@@ -504,7 +536,7 @@ async def test_watch_location(
                 },
             ]
 
-            mock_get_info.return_value = {
+            heat_info = {
                 "Atlanta": {
                     69: {
                         "heat_id": 1,
@@ -551,6 +583,8 @@ async def test_watch_location(
                 }
             }
 
+            mock_get_info.side_effect = [heat_info, None, heat_info]
+            mock_sleep.side_effect = [None, None, CancelledError]
     else:
         mock_response.status = 500
         mock_response.json.return_value = None
@@ -574,11 +608,15 @@ async def test_watch_location(
         mock_k1db.add_sessions.assert_not_called()
 
     else:
-        mock_logger.debug.assert_any_call(
-            "%s race beginning at %s UTC has finished", loc["location"], now.time()
-        )
+        mock_k1db.add_heats.assert_called_once()
+        mock_k1db.add_sessions.assert_called_once()
         mock_logger.info.assert_any_call(
-            "Saved data for %s %s race", now.time(), loc["location"]
+            "Saved all data for %s race beginning at %s UTC",
+            loc["location"],
+            now.time(),
+        )
+        mock_logger.debug.assert_called_once_with(
+            "Got data for %s %s heat", loc["location"], now.time()
         )
         mock_k1db.add_heats.assert_called_once_with(
             None,

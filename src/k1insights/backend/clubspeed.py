@@ -368,11 +368,21 @@ async def fetch_and_parse(
 
     async with session.get(url) as res:
         if res.status != 200:
-            logger.error("Got bad status code fetching URL: %s", res.status)
+            logger.error("Fetching URL returned bad status code: %s", res.status)
             logger.debug("Source URL: %s", url)
         else:
-            parser.feed(await res.text())
-            result = parser
+            res_page = await res.text()
+            try:
+                parser.feed(res_page)
+            except KeyError:
+                if "Server Error" in res_page:
+                    logger.error("K1 could not provide valid response for URL %s", url)
+                else:
+                    logger.exception("Failed to parse response for URL %s", url)
+            except Exception:
+                logger.exception("Failed to parse response for URL %s", url)
+            else:
+                result = parser
 
     return result
 
@@ -529,7 +539,7 @@ async def watch_location(logger: Logger, loc: K1Location, db: Connection) -> NoR
             heat: HeatData = {}
             sessions: list[FullSession] = []
             all_msgs = []
-            heat_num = -1
+            heat_num = last_heat
             async with session.post(url, data=params) as res:
                 if res.status != 200:
                     logger.error(
@@ -547,24 +557,25 @@ async def watch_location(logger: Logger, loc: K1Location, db: Connection) -> NoR
                     heat_num = int(data["ScoreboardData"][0]["HeatNo"])
 
                 if not (data["RaceRunning"] or heat_num == last_heat):
-                    last_heat = heat_num
                     raw_heat = await get_heat_info(logger, session, loc, heat_num)
-                    heat_data = raw_heat[loc["location"]][heat_num]
-                    all_sessions = heat_data["sessions"]
-                    heat = {
-                        "location": loc["location"],
-                        "track": heat_data["track"],
-                        "time": heat_data["time"],
-                        "race_type": heat_data["race_type"],
-                        "win_cond": heat_data["win_cond"],
-                    }
+                    heat_data = raw_heat[loc["location"]].get(heat_num, {})
 
-                    K1DB.add_heats(db, heat)
-                    logger.debug(
-                        "%s race beginning at %s UTC has finished",
-                        heat["location"],
-                        heat["time"].time(),
-                    )
+                    if heat_data:
+                        last_heat = heat_num
+                        all_sessions = heat_data["sessions"]
+                        heat = {
+                            "location": loc["location"],
+                            "track": heat_data["track"],
+                            "time": heat_data["time"],
+                            "race_type": heat_data["race_type"],
+                            "win_cond": heat_data["win_cond"],
+                        }
+
+                        logger.debug(
+                            "Got data for %s %s heat",
+                            heat["location"],
+                            heat["time"].time(),
+                        )
 
                     for racer in data["ScoreboardData"]:
                         racer_id = int(racer["CustID"])
@@ -595,12 +606,15 @@ async def watch_location(logger: Logger, loc: K1Location, db: Connection) -> NoR
                                 }
                             )
 
-                    K1DB.add_sessions(db, sessions)
-                    logger.info(
-                        "Saved data for %s %s race",
-                        heat["time"].time(),
-                        heat["location"],
-                    )
+                    if heat and sessions:
+                        K1DB.add_heats(db, heat)
+                        K1DB.add_sessions(db, sessions)
+
+                        logger.info(
+                            "Saved all data for %s race beginning at %s UTC",
+                            heat["location"],
+                            heat["time"].time(),
+                        )
                     break
 
             await sleep(10)
