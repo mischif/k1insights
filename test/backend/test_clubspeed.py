@@ -1,11 +1,17 @@
 from asyncio import CancelledError
+from asyncio import TimeoutError as Timeout
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from aiohttp import ClientResponse, ClientSession
+from aiohttp import (
+    ClientConnectorError,
+    ClientResponse,
+    ClientResponseError,
+    ClientSession,
+)
 from pytz import utc
 
 from k1insights.backend.clubspeed import (
@@ -25,7 +31,15 @@ from k1insights.common.constants import LOCATIONS
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "scenario",
-    ["bad-status", "normal-keyerror", "wonky-keyerror", "other-error", "good"],
+    [
+        "timeout",
+        "bad-connect",
+        "bad-status",
+        "normal-keyerror",
+        "wonky-keyerror",
+        "other-error",
+        "good",
+    ],
 )
 async def test_fetch_and_parse(scenario, blank_db):
     mock_logger = Mock()
@@ -33,8 +47,16 @@ async def test_fetch_and_parse(scenario, blank_db):
     mock_parser.return_value = mock_parser
     mock_session = AsyncMock(spec=ClientSession)
 
-    if scenario == "bad-status":
-        mock_session.get.return_value.__aenter__.return_value.status = 404
+    if scenario == "timeout":
+        mock_session.get.side_effect = Timeout()
+    elif scenario == "bad-connect":
+        mock_session.get.side_effect = ClientConnectorError(
+            "Cannot connect to host [Connect call failed]", os_error=OSError(110)
+        )
+    elif scenario == "bad-status":
+        mock_session.get.side_effect = ClientResponseError(
+            request_info=None, history=(), status=404
+        )
     else:
         mock_session.get.return_value.__aenter__.return_value.status = 200
 
@@ -63,9 +85,15 @@ async def test_fetch_and_parse(scenario, blank_db):
     else:
         assert result is None
 
-        if scenario == "bad-status":
+        if scenario == "timeout":
             mock_logger.error.assert_called_once_with(
-                "Fetching URL returned bad status code: %s", 404
+                "Timed out connecting to URL %s", "http://example.com"
+            )
+        elif scenario == "bad-connect":
+            mock_logger.error.assert_called_once_with("Error connecting to K1 servers")
+        elif scenario == "bad-status":
+            mock_logger.error.assert_called_once_with(
+                "Fetching URL returned bad HTTP code: %s", 404
             )
             mock_logger.debug.assert_called_once_with(
                 "Source URL: %s", "http://example.com"
@@ -393,12 +421,14 @@ async def test_get_racer_data(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "good_response, race_running, new_race",
+    "scenario, race_running, new_race",
     [
-        [False, False, False],
-        [True, True, True],
-        [True, False, False],
-        [True, False, True],
+        ["timeout", False, False],
+        ["bad-connect", False, False],
+        ["bad-status", False, False],
+        ["good", True, True],
+        ["good", False, False],
+        ["good", False, True],
     ],
 )
 @patch("k1insights.backend.clubspeed.sleep", side_effect=CancelledError)
@@ -410,7 +440,7 @@ async def test_watch_location(
     mock_get_info,
     mock_k1db,
     mock_sleep,
-    good_response,
+    scenario,
     race_running,
     new_race,
     blank_db,
@@ -421,10 +451,22 @@ async def test_watch_location(
 
     mock_response = Mock(spec=ClientResponse)
     mock_ctx_man = AsyncMock(spec=ClientSession)
-    mock_ctx_man.post.return_value.__aenter__.return_value = mock_response
     mock_session.return_value.__aenter__.return_value = mock_ctx_man
 
-    if good_response:
+    if scenario == "timeout":
+        mock_ctx_man.post.side_effect = Timeout()
+    elif scenario == "bad-connect":
+        mock_ctx_man.post.side_effect = ClientConnectorError(
+            "Cannot connect to host [Connect call failed]", os_error=OSError(110)
+        )
+    elif scenario == "bad-status":
+        mock_ctx_man.post.side_effect = ClientResponseError(
+            request_info=None, history=(), status=500
+        )
+    else:
+        mock_ctx_man.post.return_value.__aenter__.return_value = mock_response
+
+    if scenario == "good":
         mock_response.status = 200
         mock_response.json.return_value = {
             "MessageId": 42,
@@ -585,23 +627,27 @@ async def test_watch_location(
 
             mock_get_info.side_effect = [heat_info, None, heat_info]
             mock_sleep.side_effect = [None, None, CancelledError]
-    else:
-        mock_response.status = 500
-        mock_response.json.return_value = None
 
     try:
         await watch_location(mock_logger, loc, None)
     except CancelledError:
         pass
 
-    if not good_response:
-        mock_logger.error.assert_called_once_with(
-            "Got %s error watching for %s data", 500, loc["location"]
-        )
+    if scenario != "good":
         mock_get_info.assert_not_called()
         mock_k1db.add_heats.assert_not_called()
         mock_k1db.add_sessions.assert_not_called()
 
+        if scenario == "timeout":
+            mock_logger.error.assert_called_once_with(
+                "Timed out watching for %s data", loc["location"]
+            )
+        elif scenario == "bad-connect":
+            mock_logger.error.assert_called_once_with("Error connecting to K1 servers")
+        elif scenario == "bad-status":
+            mock_logger.error.assert_called_once_with(
+                "Got %s HTTP code watching for %s data", 500, loc["location"]
+            )
     elif race_running or not new_race:
         mock_get_info.assert_not_called()
         mock_k1db.add_heats.assert_not_called()

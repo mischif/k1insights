@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+from asyncio import TimeoutError as Timeout
 from asyncio import sleep
 from base64 import b64decode, b64encode
 from collections.abc import Coroutine, Iterator, ValuesView
@@ -17,7 +18,12 @@ from sqlite3 import Connection
 from typing import Any, NoReturn, TypedDict, TypeVar, cast
 from uuid import uuid4
 
-from aiohttp import ClientSession, TCPConnector
+from aiohttp import (
+    ClientConnectorError,
+    ClientResponseError,
+    ClientSession,
+    TCPConnector,
+)
 from aioitertools.asyncio import gather_iter
 from pytz import utc
 
@@ -366,23 +372,28 @@ async def fetch_and_parse(
     result = None
     parser = parser_class(loc_data)
 
-    async with session.get(url) as res:
-        if res.status != 200:
-            logger.error("Fetching URL returned bad status code: %s", res.status)
-            logger.debug("Source URL: %s", url)
-        else:
+    try:
+        res_page = None
+        async with session.get(url) as res:
             res_page = await res.text()
-            try:
+            if res_page is not None:
                 parser.feed(res_page)
-            except KeyError:
-                if "Server Error" in res_page:
-                    logger.error("K1 could not provide valid response for URL %s", url)
-                else:
-                    logger.exception("Failed to parse response for URL %s", url)
-            except Exception:
-                logger.exception("Failed to parse response for URL %s", url)
-            else:
                 result = parser
+
+    except ClientResponseError as e:
+        logger.error("Fetching URL returned bad HTTP code: %s", e.status)
+        logger.debug("Source URL: %s", url)
+    except ClientConnectorError:
+        logger.error("Error connecting to K1 servers")
+    except Timeout:
+        logger.error("Timed out connecting to URL %s", url)
+    except KeyError:
+        if res_page is not None and "Server Error" in res_page:
+            logger.error("K1 could not provide valid response for URL %s", url)
+        else:
+            logger.exception("Failed to parse response for URL %s", url)
+    except Exception:
+        logger.exception("Failed to parse response for URL %s", url)
 
     return result
 
@@ -472,7 +483,9 @@ async def get_heat_info(
 
 async def get_racer_data(logger: Logger, racer_id: int, after: datetime) -> RacerData:
     result: RacerData = {}
-    async with ClientSession(connector=TCPConnector(limit=MAX_POOL_SIZE)) as session:
+    async with ClientSession(
+        connector=TCPConnector(limit=MAX_POOL_SIZE), raise_for_status=True
+    ) as session:
         history = await get_racer_history(logger, session, racer_id, after)
         if history:
             heats_by_location = {}
@@ -532,7 +545,9 @@ async def watch_location(logger: Logger, loc: K1Location, db: Connection) -> NoR
     url = f"https://{loc['subdomain']}.clubspeedtiming.com/SP_Center/signalr"
     last_heat = -1
 
-    async with ClientSession(connector=TCPConnector(limit=MAX_POOL_SIZE)) as session:
+    async with ClientSession(
+        connector=TCPConnector(limit=MAX_POOL_SIZE), raise_for_status=True
+    ) as session:
         logger.info("Started %s live data fetcher", loc["location"])
 
         while True:
@@ -540,15 +555,20 @@ async def watch_location(logger: Logger, loc: K1Location, db: Connection) -> NoR
             sessions: list[FullSession] = []
             all_msgs = []
             heat_num = last_heat
-            async with session.post(url, data=params) as res:
-                if res.status != 200:
-                    logger.error(
-                        "Got %s error watching for %s data", res.status, loc["location"]
-                    )
-                else:
+
+            try:
+                async with session.post(url, data=params) as res:
                     res_data = await res.json()
                     params["messageId"] = res_data["MessageId"]
                     all_msgs = res_data["Messages"]
+            except ClientResponseError as e:
+                logger.error(
+                    "Got %s HTTP code watching for %s data", e.status, loc["location"]
+                )
+            except ClientConnectorError:
+                logger.error("Error connecting to K1 servers")
+            except Timeout:
+                logger.error("Timed out watching for %s data", loc["location"])
 
             for msg in all_msgs:
                 data = msg["Args"][0]
