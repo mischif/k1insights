@@ -11,8 +11,8 @@ from argparse import Action, ArgumentParser, Namespace
 from asyncio import run
 from collections.abc import Sequence
 from datetime import date, datetime
-from logging import getLogger
-from sys import exit
+from logging import INFO, StreamHandler, getLogger
+from sys import exit, stdout
 from typing import Any, cast
 
 from pytz import utc
@@ -77,6 +77,9 @@ def main(args: list[str] | None = None) -> None:
 
     parsed: Namespace = parser.parse_args(args)
     logger = getLogger(__name__)
+    logger.addHandler(StreamHandler(stdout))
+    logger.setLevel(INFO)
+
     success = False
 
     db = K1DB.connect(logger, DB_PATH)
@@ -88,6 +91,9 @@ def main(args: list[str] | None = None) -> None:
             K1DB.add_racer(db, data["rid"], data["name"], parsed.fast, parsed.track)
             K1DB.add_heats(db, data["sessions"])
             K1DB.add_sessions(db, data["sessions"])
+            logger.info(
+                "Successfully added data for racer %s, id %s", data["name"], parsed.id
+            )
             success = True
 
         K1DB.close(db)

@@ -47,7 +47,7 @@ def main(args: list[str] | None = None) -> None:
         "-d",
         "--debug",
         action="store_true",
-        help="gzipped rstats logfile",
+        help="Display debug logs",
     )
     parsed: Namespace = parser.parse_args(args)
 

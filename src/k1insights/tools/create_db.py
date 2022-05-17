@@ -8,8 +8,9 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
+from logging import INFO, StreamHandler, getLogger
 from pathlib import Path
-from sys import exit
+from sys import exit, stdout
 
 from k1insights.common.db import K1DB
 
@@ -36,16 +37,23 @@ def main(args: list[str] | None = None) -> None:
     )
 
     parsed: Namespace = parser.parse_args(args)
+    logger = getLogger(__name__)
+    logger.addHandler(StreamHandler(stdout))
+    logger.setLevel(INFO)
 
     success = False
 
     if parsed.overwrite or not parsed.dest.exists():
         parsed.dest.unlink(missing_ok=True)
         K1DB.create_db(parsed.dest)
-        print("Database successfully created, remember this environment variable:")
-        print(f"K1_DATA_DB={parsed.dest.absolute()}")
+        logger.info(
+            "Database successfully created, remember this environment variable:"
+        )
+        logger.info("K1_DATA_DB=%s", parsed.dest.absolute())
         success = True
     else:
-        print(f"Not overwriting {parsed.dest.absolute()}; delete the file or use '-f'")
+        logger.warning(
+            f"Not overwriting {parsed.dest.absolute()}; delete the file or use '-f'"
+        )
 
     exit(0 if success else 1)
